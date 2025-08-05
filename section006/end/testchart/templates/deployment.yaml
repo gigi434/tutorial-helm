@@ -1,7 +1,8 @@
 apiVersion: apps/v1
 kind: Deployment
   {{- "helm templating is" -}} , {{- "Cool" -}}
-  {{- .Chart.Version -}}
+  {{ .Chart.Version }}
+  {{ .Values.my.custom.values | default "test-my-data" | upper | quote }}
 metadata:
   name: {{ include "testchart.fullname" . }}
   labels:
