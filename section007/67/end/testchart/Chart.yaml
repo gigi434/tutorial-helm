@@ -25,5 +25,14 @@ appVersion: "1.16.0"
 
 dependencies:
   - name: mysql
-    version: ^13.0.0
+    version: ^14.0.0
     repository: https://charts.bitnami.com/bitnami
+    # condition: mysql.enabled
+    tags:
+      - enabled
+  - name: apache
+    version: ^12.0.0
+    repository: https://charts.bitnami.com/bitnami
+    # condition: apache.enabled
+    tags:
+      - enabled
