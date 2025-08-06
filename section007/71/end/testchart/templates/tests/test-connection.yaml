@@ -1,0 +1,74 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "testchart.fullname" . }}-test-connection"
+  labels:
+    {{- include "testchart.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  containers:
+    - name: wget
+      image: busybox:1.36
+      imagePullPolicy: IfNotPresent
+      command: 
+        - sh
+        - -c
+        - |
+          echo "Starting connectivity test for {{ include "testchart.fullname" . }}"
+          echo "Target URL: http://{{ include "testchart.fullname" . }}:{{ .Values.service.port }}"
+          
+          # Test 1: Basic connectivity with wget
+          echo "Test 1: Basic connectivity check"
+          if wget -q -O- http://{{ include "testchart.fullname" . }}:{{ .Values.service.port }} > /dev/null 2>&1; then
+            echo "✓ Basic connectivity: SUCCESS"
+          else
+            echo "✗ Basic connectivity: FAILED"
+            exit 1
+          fi
+          
+          # Test 2: Response content check
+          echo "Test 2: Response content check"
+          RESPONSE=$(wget -q -O- http://{{ include "testchart.fullname" . }}:{{ .Values.service.port }})
+          if echo "$RESPONSE" | grep -q "nginx"; then
+            echo "✓ Response contains 'nginx': SUCCESS"
+          else
+            echo "✗ Response check: FAILED"
+            echo "Response content:"
+            echo "$RESPONSE" | head -20
+            exit 1
+          fi
+          
+          # Test 3: Service availability (using wget spider mode)
+          echo "Test 3: Service availability check"
+          if wget -q --spider http://{{ include "testchart.fullname" . }}:{{ .Values.service.port }} 2>&1; then
+            echo "✓ Service is reachable: SUCCESS"
+          else
+            echo "✗ Service availability: FAILED"
+            exit 1
+          fi
+          
+          # Test 4: Multiple requests
+          echo "Test 4: Multiple requests test"
+          FAILED=0
+          for i in $(seq 1 5); do
+            echo -n "  Request $i: "
+            if wget -q -O- http://{{ include "testchart.fullname" . }}:{{ .Values.service.port }} > /dev/null 2>&1; then
+              echo "OK"
+            else
+              echo "FAILED"
+              FAILED=$((FAILED + 1))
+            fi
+          done
+          
+          if [ $FAILED -eq 0 ]; then
+            echo "✓ All 5 requests succeeded: SUCCESS"
+          else
+            echo "✗ $FAILED out of 5 requests failed"
+            exit 1
+          fi
+          
+          echo ""
+          echo "All tests completed successfully!"
+  restartPolicy: Never
